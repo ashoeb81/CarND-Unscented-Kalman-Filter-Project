@@ -1,3 +1,4 @@
+#include <math.h>
 #include "ukf.h"
 #include "tools.h"
 #include "Eigen/Dense"
@@ -61,12 +62,58 @@ UKF::~UKF() {}
  * either radar or laser.
  */
 void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
-  /**
-  TODO:
+  // Use the first measurement to initialize the filter.
+  if (!is_initialized_) {
+    // Check the measurement type and initialize appropriatly.
+    if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+      // With radar can use the measurement to initialize position and velocity, but not pose.
+      x_ << meas_package.raw_measurements_(0) * cos(meas_package.raw_measurements_(1)),  // px
+              meas_package.raw_measurements_(0) * sin(meas_package.raw_measurements_(1)),  // py
+              meas_package.raw_measurements_(2)  // velocity magnitude (v)
+      0,  // yaw angle
+              0;  // yaw rate
+      // Since the radar tells us nothing about pose, we'll express more uncertainty in that dimension.
+      P_ << 1, 0, 0, 0, 0,
+              0, 1, 0, 0, 0,
+              0, 0, 1, 0, 0,
+              0, 0, 0, 10, 0,
+              0, 0, 0, 0, 10;
 
-  Complete this function! Make sure you switch between lidar and radar
-  measurements.
-  */
+    } else {
+      // With laser as the first measurement we can initialize position but not velocity or pose.
+      x_ << meas_package.raw_measurements_(0),  // px
+              meas_package.raw_measurements_(1),  // py
+              0,  // velocity magnitude (v)
+              0,  // yaw angle
+              0;  // yaw rate
+      // Since laser tells us nothing about velocity and pose, we'll express more uncertainty in those dimensions.
+      P_ << 1, 0, 0, 0, 0,
+              0, 1, 0, 0, 0,
+              0, 0, 10, 0, 0,
+              0, 0, 0, 10, 0,
+              0, 0, 0, 0, 10;
+    }
+    // Record timestamp of this measurement.
+    time_us_ = meas_package.timestamp_;
+    is_initialized_ = true;
+    return;
+  }
+
+  /*****************************************************************************
+   *  Prediction
+   ****************************************************************************/
+  double delta_t = (meas_package.timestamp_ - time_us_) / 1000000;
+
+  Prediction(delta_t);
+
+  /*****************************************************************************
+  *  Update
+  ****************************************************************************/
+  if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+
+  } else {
+
+  }
 }
 
 /**
