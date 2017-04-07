@@ -58,6 +58,34 @@ UKF::UKF() {
 UKF::~UKF() {}
 
 /**
+ * Generate augmented sigma points using current state vector and state covariance matrix.
+ */
+MatrixXd UKF::GenerateAugmentedSigmaPoints() {
+    // Size of state vector.
+    int n_x = x_.size();
+    // Size of augmented state vector.
+    int n_aug = n_x + 2;
+
+    // Augmented state vector.
+    VectorXd x_aug(n_aug);
+    x_aug.setZero();
+    x_aug.head(x_.size()) = x_;
+
+    // Augmented state covariance.
+    MatrixXd P_aug(n_aug, n_aug);
+    p_aug.topLeftCorner(n_x, n_x) = P_;
+    p_aug(n_x, n_x) = pow(std_a_, 2);
+    p_aug(n_x+1, n_x+1) = pow(std_yawdd_, 2);
+
+    // Generate Augmented Sigma Points
+    MatrixXd Xsigma_aug(n_aug, 2*n_aug + 1);
+    Xsigma_aug.col(0) = x_aug;
+    for (int i=0; i < n_aug; ++i){
+        ???
+    }
+}
+
+/**
  * @param {MeasurementPackage} meas_package The latest measurement data of
  * either radar or laser.
  */
