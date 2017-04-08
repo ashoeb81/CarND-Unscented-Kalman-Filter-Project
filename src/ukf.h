@@ -74,6 +74,18 @@ public:
     ///* the current NIS for laser
     double NIS_laser_;
 
+    //* Predicted radar measurement
+    VectorXd zpred_radar_;
+
+    //* Predicted radar measurement covariance
+    MatrixXd S_radar_;
+
+    //* Predicted laser measurement
+    VectorXd zpred_laser_;
+
+    //* Predicted laser measurement covariance
+    MatrixXd S_laser_;
+
     /**
      * Constructor
      */
@@ -134,6 +146,11 @@ public:
      * @param meas_package The measurement at k+1
      */
     void UpdateLidar(MeasurementPackage meas_package);
+
+    /**
+     * Predict radar measurement and covariance.
+     */
+    void PredictRadarMeasurement();
 
     /**
      * Updates the state and the state covariance matrix using a radar measurement

@@ -61,6 +61,18 @@ UKF::UKF() {
     // Sigma point weights
     weights_ = VectorXd(2 * n_aug_ + 1);
     InitializeWeights();
+
+    // Predicted radar measurement
+    zpred_radar_ = VectorXd(3);
+
+    // Predicted radar measurement covariance
+    S_radar_ = MatrixXd(3, 3);
+
+    // Predicted laser measurement
+    zpred_laser_ = VectorXd(2);
+
+    // Predicted laser measurement covariance
+    S_laser_ = MatrixXd(2, 2);
 }
 
 UKF::~UKF() {}
@@ -240,9 +252,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     *  Update
     ****************************************************************************/
     if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
-
+        UpdateRadar(meas_package);
     } else {
-
+        UpdateLidar(meas_package);
     }
 }
 
@@ -289,6 +301,13 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 }
 
 /**
+ * Predict radar measurement and covariance.
+ */
+void UKF::PredictRadarMeasurement() {
+
+}
+
+/**
  * Updates the state and the state covariance matrix using a radar measurement.
  * @param {MeasurementPackage} meas_package
  */
@@ -301,4 +320,9 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
     You'll also need to calculate the radar NIS.
     */
+
+    // Compute measurement prediction and measurement covariance prediction
+    PredictRadarMeasurement();
+
+    // Update state based on actual radar measurement
 }
