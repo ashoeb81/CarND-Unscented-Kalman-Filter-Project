@@ -91,6 +91,12 @@ public:
     void ProcessMeasurement(MeasurementPackage meas_package);
 
     /**
+     * InitializeWeights
+     * Initializes sigma point weights
+     */
+    void InitializeWeights();
+
+    /**
      * GenerateAugmentedSigmaPoints
      * Generates augmented sigma points using current state vector and state covariance matrix.
      */
@@ -99,8 +105,10 @@ public:
     /**
      * PredictSigmaPoints
      * Predicts sigma point using state process and noise models
+     * @param Xsigma_aug
+     * @param dt
      */
-    void PredictSigmaPoints();
+    void PredictSigmaPoints(const MatrixXd &Xsigma_aug, float dt);
 
     /**
      * PredictState

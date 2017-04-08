@@ -46,53 +46,61 @@ UKF::UKF() {
     // Radar measurement noise standard deviation radius change in m/s
     std_radrd_ = 0.3;
 
+    // State vector size
+    n_x_ = x_.size();
+
+    // Augmented state vector size
+    n_aug_ = n_x_ + 2;
+
+    // Dispersion factor
+    lambda_ = 3 - n_aug_;
+
     // Predicted Sigma Points
-    Xsig_pred_ = MatrixXd(5, 15);
+    Xsig_pred_ = MatrixXd(n_x_, 2 * n_aug_ + 1);
 
-    /**
-    TODO:
-
-    Complete the initialization. See ukf.h for other member properties.
-
-    Hint: one or more values initialized above might be wildly off...
-    */
+    // Sigma point weights
+    weights_ = VectorXd(2 * n_aug_ + 1);
+    InitializeWeights();
 }
 
 UKF::~UKF() {}
 
 /**
+ * Initialize sigma point weights
+ */
+void UKF::InitializeWeights() {
+    weights_(0) = lambda_ / (lambda_ + n_aug_);
+    for (int i = 1; i < weights_.size(); i++) {
+        double weight = 0.5 / (n_aug_ + lambda_);
+        weights_(i) = weight;
+    }
+}
+
+
+/**
  * Generate augmented sigma points using current state vector and state covariance matrix.
  */
 MatrixXd UKF::GenerateAugmentedSigmaPoints() {
-    // Size of state vector.
-    int n_x = x_.size();
-
-    // Size of augmented state vector.
-    int n_aug = n_x + 2;
-
-    // Dispersion factor
-    double lambda = 3 - n_aug;
-
     // Augmented state vector.
-    VectorXd x_aug(n_aug);
+    VectorXd x_aug(n_aug_);
     x_aug.setZero();
     x_aug.head(x_.size()) = x_;
 
     // Augmented state covariance.
-    MatrixXd P_aug(n_aug, n_aug);
-    P_aug.topLeftCorner(n_x, n_x) = P_;
-    P_aug(n_x, n_x) = pow(std_a_, 2);
-    P_aug(n_x + 1, n_x + 1) = pow(std_yawdd_, 2);
+    MatrixXd P_aug(n_aug_, n_aug_);
+    P_aug.topLeftCorner(n_x_, n_x_) = P_;
+    P_aug(n_x_, n_x_) = pow(std_a_, 2);
+    P_aug(n_x_ + 1, n_x_ + 1) = pow(std_yawdd_, 2);
 
     // Square root of augmented state covariance matrix.
     MatrixXd P_aug_sqrt = P_aug.llt().matrixL();
 
     // Generate Augmented Sigma Points
-    MatrixXd Xsigma_aug(n_aug, 2 * n_aug + 1);
+    MatrixXd Xsigma_aug(n_aug_, 2 * n_aug_ + 1);
     Xsigma_aug.col(0) = x_aug;
-    for (int i = 0; i < n_aug; ++i) {
-        Xsigma_aug.col(i + 1) = x_aug + sqrt(lambda + n_aug) * P_aug_sqrt.col(i);
-        Xsigma_aug.col(i + 1 + n_aug) = x_aug - sqrt(lambda + n_aug) * P_aug_sqrt.col(i);
+    for (int i = 0; i < n_aug_; ++i) {
+        Xsigma_aug.col(i + 1) = x_aug + sqrt(lambda_ + n_aug_) * P_aug_sqrt.col(i);
+        Xsigma_aug.col(i + 1 + n_aug_) = x_aug - sqrt(lambda_ + n_aug_) * P_aug_sqrt.col(i);
     }
 
     return Xsigma_aug;
@@ -103,10 +111,8 @@ MatrixXd UKF::GenerateAugmentedSigmaPoints() {
  *
  */
 void UKF::PredictSigmaPoints(const MatrixXd &Xsigma_aug, float dt) {
-    // Size of augmented state vector.
-    int n_aug = x_.size() + 2;
 
-    for (int i = 0; i < 2 * n_aug + 1; i++) {
+    for (int i = 0; i < 2 * n_aug_ + 1; i++) {
         // Extract state from current sigma point.
         double p_x = Xsigma_aug(0, i);
         double p_y = Xsigma_aug(1, i);
@@ -159,20 +165,9 @@ void UKF::PredictSigmaPoints(const MatrixXd &Xsigma_aug, float dt) {
  * Predict state using predicted sigma points
  */
 void UKF::PredictState() {
-    // Set weights
-    int n_aug = x_.size() + 2;
-    double lambda = 3 - n_aug;
-
-    VectorXd weights(2 * n_aug + 1);
-    weights(0) = lambda / (lambda + n_aug);
-    for (int i = 1; i < 2 * n_aug + 1; i++) {
-        double weight = 0.5 / (n_aug + lambda);
-        weights(i) = weight;
-    }
-
     x_.fill(0.0);
-    for (int i = 0; i < 2 * n_aug + 1; i++) {
-        x_ = x_ + weights(i) * Xsig_pred_.col(i);
+    for (int i = 0; i < 2 * n_aug_ + 1; i++) {
+        x_ = x_ + weights_(i) * Xsig_pred_.col(i);
     }
 }
 
@@ -180,26 +175,15 @@ void UKF::PredictState() {
  * Predict state covariance using sigma points
  */
 void UKF::PredictStateCovariance() {
-    // Set weights
-    int n_aug = x_.size() + 2;
-    double lambda = 3 - n_aug;
-
-    VectorXd weights(2 * n_aug + 1);
-    weights(0) = lambda / (lambda + n_aug);
-    for (int i = 1; i < 2 * n_aug + 1; i++) {
-        double weight = 0.5 / (n_aug + lambda);
-        weights(i) = weight;
-    }
-
     P_.fill(0.0);
-    for (int i = 0; i < 2 * n_aug + 1; i++) {
+    for (int i = 0; i < 2 * n_aug_ + 1; i++) {
         VectorXd x_diff = Xsig_pred_.col(i) - x_.col(i);
 
         //angle normalization
         while (x_diff(3) > M_PI) x_diff(3) -= 2. * M_PI;
         while (x_diff(3) < -M_PI) x_diff(3) += 2. * M_PI;
 
-        P_ = P_ + weights(i) * x_diff * x_diff.transpose();
+        P_ = P_ + weights_(i) * x_diff * x_diff.transpose();
     }
 }
 
