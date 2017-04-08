@@ -97,6 +97,24 @@ public:
      MatrixXd GenerateAugmentedSigmaPoints();
 
     /**
+     * PredictSigmaPoints
+     * Predicts sigma point using state process and noise models
+     */
+    void PredictSigmaPoints();
+
+    /**
+     * PredictState
+     * Predicts state using predicted sigma points
+     */
+    void PredictState();
+
+    /**
+     * PredictStateCovariance
+     * Predicts state covariance using predicted sigma points
+     */
+    void PredictStateCovariance();
+
+    /**
      * Prediction Predicts sigma points, the state, and the state covariance
      * matrix
      * @param delta_t Time between k and k+1 in s
