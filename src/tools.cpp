@@ -11,13 +11,20 @@ Tools::~Tools() {}
 
 VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
                               const vector<VectorXd> &ground_truth) {
-    /**
-    TODO:
-      * Calculate the RMSE here.
-    */
-    VectorXd rmse(estimations(0).size());
+    // Vector to store rmse for each estimated variable.
+    VectorXd rmse(estimations[0].size());
     for (int i=0; i < estimations.size(); i++) {
-        VectorXd diff = estimations(i) - ground_truth(i);
-        dif
+        // Compute error between estimate and truth.
+        VectorXd diff = estimations[i] - ground_truth[i];
+        // Accumulate squared error
+        rmse = rmse.array() + diff.array().square();
     }
+    // Compute mean squared error
+    rmse = rmse / estimations.size();
+
+    // Compute root means sqaured error
+    rmse = rmse.array().sqrt();
+
+    return rmse;
+
 }
