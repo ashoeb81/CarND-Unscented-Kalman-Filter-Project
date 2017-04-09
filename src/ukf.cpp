@@ -137,8 +137,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
             P_ << 1, 0, 0, 0, 0,
                     0, 1, 0, 0, 0,
                     0, 0, 1, 0, 0,
-                    0, 0, 0, 10, 0,
-                    0, 0, 0, 0, 10;
+                    0, 0, 0, 100, 0,
+                    0, 0, 0, 0, 100;
 
         } else {
 
@@ -152,9 +152,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
             // Since laser tells us nothing about velocity and pose, we'll express more uncertainty in those dimensions.
             P_ << 1, 0, 0, 0, 0,
                     0, 1, 0, 0, 0,
-                    0, 0, 10, 0, 0,
-                    0, 0, 0, 10, 0,
-                    0, 0, 0, 0, 10;
+                    0, 0, 100, 0, 0,
+                    0, 0, 0, 100, 0,
+                    0, 0, 0, 0, 100;
         }
 
         // Initialize weights that will be used to weight sigma points
