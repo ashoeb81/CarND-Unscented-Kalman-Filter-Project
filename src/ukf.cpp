@@ -21,10 +21,10 @@ UKF::UKF() {
     use_radar_ = true;
 
     // initial state vector
-    x_ = VectorXd(5);
+    x_ = VectorXd(NUM_STATES);
 
     // initial covariance matrix
-    P_ = MatrixXd(5, 5);
+    P_ = MatrixXd(NUM_STATES, NUM_STATES);
 
     // Process noise standard deviation longitudinal acceleration in m/s^2
     std_a_ = 3;
@@ -76,7 +76,7 @@ UKF::UKF() {
     // Augmented sigma points
     Xsigma_aug_ = MatrixXd(n_aug_, num_sigma_points_);
 
-    // Sigma points weights
+    // Sigma point weights
     weights_ = VectorXd(num_sigma_points_);
 
     // Predicted radar measurement
@@ -99,6 +99,15 @@ UKF::UKF() {
 }
 
 UKF::~UKF() {}
+
+/**
+ * Normalizes angle to between -Pi and Pi.
+ * @param angle The angle to be normalized.
+ */
+void UKF::NormalizeAngle(double *angle) {
+    while (*angle > M_PI) *angle -= 2. * M_PI;
+    while (*angle < -M_PI) *angle += 2. * M_PI;
+}
 
 
 /**
@@ -230,8 +239,7 @@ void UKF::Prediction(double delta_t) {
 
         // Since x_diff contains the difference of angles, normalize so
         // that the difference is between -pi and pi.
-        while (x_diff(3) > M_PI) x_diff(3) -= 2. * M_PI;
-        while (x_diff(3) < -M_PI) x_diff(3) += 2. * M_PI;
+        NormalizeAngle(&(x_diff(3)));
 
         P_ = P_ + weights_(i) * x_diff * x_diff.transpose();
     }
@@ -251,6 +259,7 @@ void UKF::GenerateSigmaPoints() {
 
     // Augmented state covariance.
     MatrixXd P_aug(n_aug_, n_aug_);
+    P_aug.fill(0.0);
     P_aug.topLeftCorner(n_x_, n_x_) = P_;
     P_aug(n_x_, n_x_) = pow(std_a_, 2);
     P_aug(n_x_ + 1, n_x_ + 1) = pow(std_yawdd_, 2);
@@ -342,12 +351,10 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     for (int i = 0; i < Xsigma_.cols(); i++) {
 
         x_diff = Xsigma_.col(i) - x_;
-        while (x_diff(3) > M_PI) x_diff(3) -= 2. * M_PI;
-        while (x_diff(3) < -M_PI) x_diff(3) += 2. * M_PI;
+        NormalizeAngle(&(x_diff(3)));
 
         z_diff = ZSigma_radar_.col(i) - zpred_radar_;
-        while (z_diff(1) > M_PI) z_diff(1) -= 2. * M_PI;
-        while (z_diff(1) < -M_PI) z_diff(1) += 2. * M_PI;
+        NormalizeAngle(&(z_diff(1)));
 
         Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
     }
@@ -359,8 +366,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     z_diff = meas_package.raw_measurements_ - zpred_radar_;
 
     //angle normalization
-    while (z_diff(1) > M_PI) z_diff(1) -= 2. * M_PI;
-    while (z_diff(1) < -M_PI) z_diff(1) += 2. * M_PI;
+    NormalizeAngle(&(z_diff(1)));
 
     //update state mean and covariance matrix
     x_ = x_ + K * z_diff;
@@ -402,8 +408,7 @@ void UKF::PredictRadarMeasurement() {
 
         // Since z_diff contains the difference of angles, normalize so
         // that the difference is between -pi and pi.
-        while (z_diff(1) > M_PI) z_diff(1) -= 2. * M_PI;
-        while (z_diff(1) < -M_PI) z_diff(1) += 2. * M_PI;
+        NormalizeAngle(&(z_diff(1)));
 
         S_radar_ = S_radar_ + weights_(i) * z_diff * z_diff.transpose();
     }
@@ -432,8 +437,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     for (int i = 0; i < Xsigma_.cols(); i++) {
 
         x_diff = Xsigma_.col(i) - x_;
-        while (x_diff(3) > M_PI) x_diff(3) -= 2. * M_PI;
-        while (x_diff(3) < -M_PI) x_diff(3) += 2. * M_PI;
+        NormalizeAngle(&(x_diff(3)));
 
         z_diff = ZSigma_laser_.col(i) - zpred_laser_;
 

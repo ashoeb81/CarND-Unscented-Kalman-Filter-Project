@@ -10,6 +10,7 @@
 
 #define NUM_RADAR_MEASUREMENTS 3
 #define NUM_LIDAR_MEASUREMENTS 2
+#define NUM_STATES 5
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -116,6 +117,12 @@ public:
      * Destructor
      */
     virtual ~UKF();
+
+    /**
+     * Normalizes angle to be between -Pi and Pi
+     * @param angle The angle to be normalized.
+     */
+    void NormalizeAngle(double *angle);
 
     /**
      * Initializes weights that will be used to weigh sigma points.
