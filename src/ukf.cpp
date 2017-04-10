@@ -102,7 +102,7 @@ UKF::~UKF() {}
 
 /**
  * Normalizes angle to between -Pi and Pi.
- * @param angle The angle to be normalized.
+ * @param angle  A pointer to the angle to be normalized.
  */
 void UKF::NormalizeAngle(double *angle) {
     while (*angle > M_PI) *angle -= 2. * M_PI;

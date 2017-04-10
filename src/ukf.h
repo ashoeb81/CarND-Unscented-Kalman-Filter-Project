@@ -120,7 +120,7 @@ public:
 
     /**
      * Normalizes angle to be between -Pi and Pi
-     * @param angle The angle to be normalized.
+     * @param angle A pointer to the angle to be normalized.
      */
     void NormalizeAngle(double *angle);
 
