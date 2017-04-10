@@ -27,10 +27,10 @@ UKF::UKF() {
     P_ = MatrixXd(NUM_STATES, NUM_STATES);
 
     // Process noise standard deviation longitudinal acceleration in m/s^2
-    std_a_ = 3;
+    std_a_ = 1.5;
 
     // Process noise standard deviation yaw acceleration in rad/s^2
-    std_yawdd_ = 3;
+    std_yawdd_ = 0.55;
 
     // Laser measurement noise standard deviation position1 in m
     std_laspx_ = 0.15;
@@ -135,7 +135,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
         // Check the measurement type and initialize appropriately.
         if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
 
-            // With radar can use the measurement to initialize position and velocity, but not pose.
+            // With radar we can use the measurement to initialize position and velocity, but not pose.
             x_ << meas_package.raw_measurements_(0) * cos(meas_package.raw_measurements_(1)),  // px
                     meas_package.raw_measurements_(0) * sin(meas_package.raw_measurements_(1)),  // py
                     meas_package.raw_measurements_(2),  // velocity magnitude (v)
@@ -146,24 +146,34 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
             P_ << 1, 0, 0, 0, 0,
                     0, 1, 0, 0, 0,
                     0, 0, 1, 0, 0,
-                    0, 0, 0, 100, 0,
-                    0, 0, 0, 0, 100;
+                    0, 0, 0, 10, 0,
+                    0, 0, 0, 0, 10;
 
         } else {
 
             // With laser as the first measurement we can initialize position but not velocity or pose.
-            x_ << meas_package.raw_measurements_(0),  // px
-                    meas_package.raw_measurements_(1),  // py
-                    0,  // velocity magnitude (v)
-                    0,  // yaw angle
-                    0;  // yaw rate
+            // However, check that the first measurement is not zero for both px and py.
+            if (meas_package.raw_measurements_(0) == 0 && meas_package.raw_measurements_(1) == 0) {
+                x_ << 0.001,  // px
+                        0.001,  // py
+                        0,  // velocity magnitude (v)
+                        0,  // yaw angle
+                        0;  // yaw rate
+            } else {
+                x_ << meas_package.raw_measurements_(0),  // px
+                        meas_package.raw_measurements_(1),  // py
+                        0,  // velocity magnitude (v)
+                        0,  // yaw angle
+                        0;  // yaw rate
+            }
 
-            // Since laser tells us nothing about velocity and pose, we'll express more uncertainty in those dimensions.
+            // Since laser tells us nothing about velocity and pose, we'll express more uncertainty
+            // in those dimensions.
             P_ << 1, 0, 0, 0, 0,
                     0, 1, 0, 0, 0,
-                    0, 0, 100, 0, 0,
-                    0, 0, 0, 100, 0,
-                    0, 0, 0, 0, 100;
+                    0, 0, 10, 0, 0,
+                    0, 0, 0, 10, 0,
+                    0, 0, 0, 0, 10;
         }
 
         // Initialize weights that will be used to weight sigma points
@@ -183,13 +193,13 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     ****************************************************************************/
 
     // Compute time elapsed since last measurement in seconds.
-    double delta_t = (meas_package.timestamp_ - time_us_) / 1000000;
+    double delta_t = (meas_package.timestamp_ - time_us_) / (1000000.0);
 
     // Update time of last measurement.
     time_us_ = meas_package.timestamp_;
 
-    // Predict sigma points, the state vector, and the state covariance.
     Prediction(delta_t);
+
 
     /*****************************************************************************
     *  Update
@@ -199,12 +209,10 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     // appropriately.
     if (meas_package.sensor_type_ == MeasurementPackage::RADAR && use_radar_) {
         UpdateRadar(meas_package);
-        return;
     }
 
     if (meas_package.sensor_type_ == MeasurementPackage::LASER && use_laser_) {
         UpdateLidar(meas_package);
-        return;
     }
 }
 
@@ -234,8 +242,9 @@ void UKF::Prediction(double delta_t) {
 
     // Use sigma points at time k+1 to compute state covariance at k+1.
     P_.fill(0.0);
+    VectorXd x_diff;
     for (int i = 0; i < num_sigma_points_; i++) {
-        VectorXd x_diff = Xsigma_.col(i) - x_;
+        x_diff = Xsigma_.col(i) - x_;
 
         // Since x_diff contains the difference of angles, normalize so
         // that the difference is between -pi and pi.
@@ -248,13 +257,13 @@ void UKF::Prediction(double delta_t) {
 /**
  * Generates augmented sigma points using current state vector and
  * state covariance matrix.
- * @attention Updates the class variable Xsigma_ with the sigma points.
+ * @attention Updates the class variable Xsigma_aug_ with the augmented sigma points.
  */
 void UKF::GenerateSigmaPoints() {
 
     // Augmented state vector.
     VectorXd x_aug(n_aug_);
-    x_aug.setZero();
+    x_aug.fill(0.0);
     x_aug.head(x_.size()) = x_;
 
     // Augmented state covariance.
@@ -269,7 +278,7 @@ void UKF::GenerateSigmaPoints() {
 
     // Sigma point calculation
     Xsigma_aug_.col(0) = x_aug;
-    for (int i = 0; i < n_aug_; ++i) {
+    for (int i = 0; i < n_aug_; i++) {
         Xsigma_aug_.col(i + 1) = x_aug + sqrt(lambda_ + n_aug_) * P_aug_sqrt.col(i);
         Xsigma_aug_.col(i + 1 + n_aug_) = x_aug - sqrt(lambda_ + n_aug_) * P_aug_sqrt.col(i);
     }
@@ -314,7 +323,7 @@ void UKF::PredictSigmaPoints(float dt) {
         // Predict yaw rate
         double yawd_p = yawd;
 
-        // Add noise position
+        // Add noise to position
         px_p = px_p + 0.5 * pow(dt, 2) * cos(yaw) * nu_a;
         py_p = py_p + 0.5 * pow(dt, 2) * sin(yaw) * nu_a;
 
@@ -344,11 +353,10 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     PredictRadarMeasurement();
 
     // Update state based on actual radar measurement
-    VectorXd x_diff;
-    VectorXd z_diff;
-    MatrixXd Tc(Xsigma_.rows(), ZSigma_radar_.rows());
+    VectorXd x_diff, z_diff;
+    MatrixXd Tc(NUM_STATES, NUM_RADAR_MEASUREMENTS);
     Tc.fill(0.0);
-    for (int i = 0; i < Xsigma_.cols(); i++) {
+    for (int i = 0; i < num_sigma_points_; i++) {
 
         x_diff = Xsigma_.col(i) - x_;
         NormalizeAngle(&(x_diff(3)));
@@ -403,8 +411,9 @@ void UKF::PredictRadarMeasurement() {
 
     // Compute predicted measurement covariance
     S_radar_.fill(0);
+    VectorXd z_diff;
     for (int i = 0; i < ZSigma_radar_.cols(); i++) {
-        VectorXd z_diff = ZSigma_radar_.col(i) - zpred_radar_;
+        z_diff = ZSigma_radar_.col(i) - zpred_radar_;
 
         // Since z_diff contains the difference of angles, normalize so
         // that the difference is between -pi and pi.
@@ -430,9 +439,8 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
 
     // Update state based on actual laser measurement
-    VectorXd x_diff;
-    VectorXd z_diff;
-    MatrixXd Tc(Xsigma_.rows(), ZSigma_laser_.rows());
+    VectorXd x_diff, z_diff;
+    MatrixXd Tc(NUM_STATES, NUM_LIDAR_MEASUREMENTS);
     Tc.fill(0.0);
     for (int i = 0; i < Xsigma_.cols(); i++) {
 
@@ -464,7 +472,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 void UKF::PredictLidarMeasurement() {
 
     // Project each sigma point into the laser measurement space.
-    for (int i = 0; i < Xsigma_.cols(); i++) {
+    for (int i = 0; i < num_sigma_points_; i++) {
         double px = Xsigma_(0, i);
         double py = Xsigma_(1, i);
         ZSigma_laser_(0, i) = px;
