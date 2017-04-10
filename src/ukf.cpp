@@ -467,7 +467,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 }
 
 /*
- * Predict lasesr measurement and covariance
+ * Predict laser measurement and covariance
  */
 void UKF::PredictLidarMeasurement() {
 
